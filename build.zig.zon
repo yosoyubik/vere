@@ -9,7 +9,7 @@
             .path = "./ext/avahi",
         },
         .curl = .{
-            .path = "./ext/curl"
+            .path = "./ext/curl",
         },
         .natpmp = .{
             .path = "./ext/natpmp",

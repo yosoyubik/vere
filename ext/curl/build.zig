@@ -223,20 +223,6 @@ pub fn build(b: *std.Build) void {
         curl.root_module.addCMacro("_FILE_OFFSET_BITS", "64");
     }
 
-    // const curl_config_h = b.addConfigHeader(.{
-    //     .style = .{
-    //         .cmake = curl_c.path("lib/curl_config.h.cmake"),
-    //     },
-    //     .include_path = "curl_config.h",
-    //     }, .{
-    // });
-
-    // const curl_config_h = b.addConfigHeader(.{
-    //     .style = .blank,
-    //     .include_path = "curl_config.h"
-    //     }, .{});
-
-    // curl.addConfigHeader(curl_config_h);
     curl.addIncludePath(curl_c.path("lib"));
     curl.addIncludePath(curl_c.path("include"));
 
@@ -428,7 +414,6 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // curl.installConfigHeader(curl_config_h);
     curl.installHeadersDirectory(curl_c.path("include/curl"), "curl", .{});
 
     b.installArtifact(curl);
