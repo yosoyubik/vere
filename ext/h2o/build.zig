@@ -3,10 +3,61 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const t = target.result;
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+    });
+
+    const uv_c = b.dependency("uv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const uv = b.addStaticLibrary(.{
+        .name = "uv",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    uv.linkLibC();
+
+    uv.addIncludePath(uv_c.path("src"));
+    uv.addIncludePath(uv_c.path(if (t.os.tag == .windows) "src/win" else "src/unix"));
+    uv.addIncludePath(uv_c.path("include"));
+    uv.addIncludePath(uv_c.path("include/uv"));
+
+    uv.addCSourceFiles(.{
+        .root = uv_c.path("src"),
+        .files = if (t.os.tag == .windows) &uv_srcs_win else &uv_srcs_unix,
+        .flags = &.{
+            if (t.os.tag == .windows)
+                "-D_WIN32"
+            else
+                "",
+            // "-DUV_ERRNO_H_",
+            // "-DE2BIG",
+            "-DHAVE_STDIO_H=1",
+            "-DHAVE_STDLIB_H=1",
+            "-DHAVE_STRING_H=1",
+            "-DHAVE_INTTYPES_H=1",
+            "-DHAVE_STDINT_H=1",
+            "-DHAVE_STRINGS_H=1",
+            "-DHAVE_SYS_STAT_H=1",
+            "-DHAVE_SYS_TYPES_H=1",
+            "-DHAVE_UNISTD_H=1",
+            "-DHAVE_DLFCN_H=1",
+            "-DHAVE_PTHREAD_PRIO_INHERIT=1",
+            "-DSTDC_HEADERS=1",
+            "-DSUPPORT_ATTRIBUTE_VISIBILITY_DEFAULT=1",
+            "-DSUPPORT_FLAG_VISIBILITY=1",
+        },
+    });
+
+    uv.installHeader(uv_c.path("include/uv.h"), "uv.h");
+    uv.installHeadersDirectory(uv_c.path("include/uv"), "", .{
+        // .include_extensions = &.{".h"},
     });
 
     const h2o_c = b.dependency("h2o", .{
@@ -21,6 +72,7 @@ pub fn build(b: *std.Build) void {
     });
 
     h2o.linkLibrary(openssl.artifact("ssl"));
+    h2o.linkLibrary(uv);
     h2o.linkLibC();
 
     h2o.addIncludePath(h2o_c.path("include"));
@@ -105,3 +157,66 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(h2o);
 }
+
+const uv_srcs = [_][]const u8{
+    "fs-poll.c",
+    "idna.c",
+    "inet.c",
+    "random.c",
+    "strscpy.c",
+    "strtok.c",
+    "threadpool.c",
+    "timer.c",
+    "uv-common.c",
+    "uv-data-getter-setters.c",
+    "version.c",
+};
+
+const uv_srcs_unix = uv_srcs ++ [_][]const u8{
+    "unix/async.c",
+    "unix/core.c",
+    "unix/dl.c",
+    "unix/fs.c",
+    "unix/getaddrinfo.c",
+    "unix/getnameinfo.c",
+    "unix/loop-watcher.c",
+    "unix/loop.c",
+    "unix/pipe.c",
+    "unix/poll.c",
+    "unix/process.c",
+    "unix/random-devurandom.c",
+    "unix/signal.c",
+    "unix/stream.c",
+    "unix/tcp.c",
+    "unix/thread.c",
+    "unix/tty.c",
+    "unix/udp.c",
+};
+
+const uv_srcs_win = uv_srcs ++ [_][]const u8{
+    "win/async.c",
+    "win/core.c",
+    "win/detect-wakeup.c",
+    "win/dl.c",
+    "win/error.c",
+    "win/fs.c",
+    "win/fs-event.c",
+    "win/getaddrinfo.c",
+    "win/getnameinfo.c",
+    "win/handle.c",
+    "win/loop-watcher.c",
+    "win/pipe.c",
+    "win/thread.c",
+    "win/poll.c",
+    "win/process.c",
+    "win/process-stdio.c",
+    "win/signal.c",
+    "win/snprintf.c",
+    "win/stream.c",
+    "win/tcp.c",
+    "win/tty.c",
+    "win/udp.c",
+    "win/util.c",
+    "win/winapi.c",
+    "win/winsock.c",
+};
