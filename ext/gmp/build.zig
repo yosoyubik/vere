@@ -23,7 +23,7 @@ pub fn build(b: *std.Build) void {
 
     lib.linkLibC();
 
-    // TODO: Verify these
+    // TODO: The values here should be provided programmatically
     const config_h = b.addConfigHeader(.{
         .style = .{
             .autoconf = dep_c.path("config.in"),
