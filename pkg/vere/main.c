@@ -1178,24 +1178,57 @@ _cw_eval_get_newt(FILE* fil_u, c3_d* len_d)
   c3_d  i;
   c3_y  hed_y = sizeof(((u3_mess*)NULL)->hed_u.hed_y);
   c3_y* byt_y = c3_malloc(hed_y);
+  c3_i  chr_i;
 
+  //  read 5-byte header
+  //
   for ( i = 0; i < hed_y; ++i ) {
-    byt_y[i] = fgetc(fil_u);
+    chr_i = fgetc(fil_u);
+    if ( EOF == chr_i ) {
+      fprintf(stderr, "eval: unexpected EOF reading newt header at byte %llu\n", i);
+      c3_free(byt_y);
+      exit(1);
+    }
+    byt_y[i] = (c3_y)chr_i;
   }
 
+  //  validate newt version tag
+  //
   if ( 0x0 != byt_y[0] ) {
-    fprintf(stderr, "corrupted newt passed to cue\n");
+    fprintf(stderr, "eval: corrupted newt header (version byte: 0x%02x, expected 0x00)\n",
+            byt_y[0]);
+    c3_free(byt_y);
     exit(1);
   }
 
+  //  extract payload length
+  //
   *len_d = (((c3_d)byt_y[1]) <<  0)
          | (((c3_d)byt_y[2]) <<  8)
          | (((c3_d)byt_y[3]) << 16)
          | (((c3_d)byt_y[4]) << 24);
+
+  //  validate payload length is non-zero
+  //
+  if ( 0 == *len_d ) {
+    fprintf(stderr, "eval: invalid newt frame with zero payload length\n");
+    c3_free(byt_y);
+    exit(1);
+  }
+
   byt_y = c3_realloc(byt_y, *len_d);
 
+  //  read payload
+  //
   for ( i = 0; i < *len_d; ++i ) {
-    byt_y[i] = fgetc(fil_u);
+    chr_i = fgetc(fil_u);
+    if ( EOF == chr_i ) {
+      fprintf(stderr, "eval: unexpected EOF reading newt payload at byte %llu of %llu\n",
+              i, *len_d);
+      c3_free(byt_y);
+      exit(1);
+    }
+    byt_y[i] = (c3_y)chr_i;
   }
 
   return byt_y;
