@@ -114,6 +114,7 @@
           pkg-config
           git
           perl
+          python3
         ]);
         extraBuildCommands = ''
           chmod +w usr
